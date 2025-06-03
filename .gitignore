@@ -4,4 +4,5 @@ main.pdb
 vc140.pdb
 account.obj
 bank.obj
+vector.obj
 /.vscode

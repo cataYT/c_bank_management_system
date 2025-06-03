@@ -10,7 +10,7 @@ typedef struct account
 {
     char* owner;
     int balance;
-    UUID _uuid;
+    UUID _uuid; // DO NOT USE THIS! USE get_account_uuid()
 } account;
 
 account create_account(const char* owner_name, const int starting_balance);
