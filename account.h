@@ -1,5 +1,4 @@
-#ifndef ACCOUNT_H
-#define ACCOUNT_H
+#pragma once
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,12 +10,9 @@ typedef struct account
 {
     char* owner;
     int balance;
-    UUID uuid;
+    UUID _uuid;
 } account;
 
-// Function declarations
-void create_uuid(account* acc);
-account create_account(const char* owner_name, int starting_balance);
+account create_account(const char* owner_name, const int starting_balance);
+UUID get_account_uuid(const account* acc);
 void free_account(account* acc);
-
-#endif // ACCOUNT_H

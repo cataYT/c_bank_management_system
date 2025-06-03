@@ -1,91 +1,104 @@
 #include "bank.h"
 #include "account.h"
 
-bank* create_bank(const int starting_cash, const unsigned int capacity)
+typedef struct bank
 {
-    static bank instance;
-    static int initialized = 0;
+    account* accs;
+    int cash;
+    int size;
+    int capacity;
+} bank;
 
-    if (initialized && capacity != instance.capacity)
+static bank BANK = {NULL, 0, 0, 0};
+static int initialized = 0;
+
+void create_bank(const int starting_cash, const unsigned int capacity)
+{
+    if (initialized && capacity != BANK.capacity)
     {
         fprintf(stderr, "Bank already initialized with different capacity.\n");
-        return &instance;
     }
 
     if (!initialized)
     {
-        instance.accs = malloc(sizeof(account) * capacity);
-        if (!instance.accs)
+        BANK.accs = malloc(sizeof(account) * capacity);
+        if (!BANK.accs)
         {
             perror("malloc failed");
             exit(1);
         }
-        instance.cash = starting_cash;
-        instance.size = 0;
-        instance.capacity = capacity;
+        BANK.cash = starting_cash;
+        BANK.size = 0;
+        BANK.capacity = capacity;
         initialized = 1;
     }
-
-    return &instance;
 }
 
-void add_account(bank* bank, const account* acc)
+// Takes ownership of account so it will invalidate previous pointer.
+// Create them temporary and then access them from bank for valid account.
+void add_account(account* acc)
 {
-    if (bank->size >= bank->capacity)
+    if (BANK.size >= BANK.capacity)
     {
-        printf("Capacity is full!\n");
+        printf("Capacity is full! Call resize_bank()\n");
         return;
     }
 
-    if (search_account(bank, acc->owner))
+    const char* owner = acc->owner;
+
+    if (search_account(owner))
     {
-        printf("Account with the name %s already exists.\n", acc->owner);
+        printf("Account with the name %s already exists.\n", owner);
         return;
     }
 
-    account* dest = &bank->accs[bank->size];
+    account* dest = &BANK.accs[BANK.size];
     dest->balance = acc->balance;
-    dest->uuid = acc->uuid;
-    dest->owner = malloc(strlen(acc->owner) + 1);
+    dest->_uuid = get_account_uuid(acc);
+    dest->owner = malloc(strlen(owner) + 1);
     if (!dest->owner)
     {
         perror("malloc failed");
         exit(1);
     }
-    strcpy(dest->owner, acc->owner);
-    bank->size++;
+    strcpy(dest->owner, owner);
+    free_account(acc);
+    BANK.size++;
 }
 
-void resize_bank(bank* bank, unsigned int new_capacity)
+void resize_bank(const unsigned int new_capacity)
 {
-    if (new_capacity < bank->capacity)
+    if (new_capacity < BANK.capacity)
     {
         printf("New capacity cannot be less than current capacity\n");
         return;
     }
-    bank->capacity = new_capacity;
 
-    account* new_accounts = realloc(bank->accs, sizeof(account) * new_capacity);
+    BANK.capacity = new_capacity;
+
+    account* new_accounts = realloc(BANK.accs, sizeof(account) * new_capacity);
+
     if (!new_accounts)
     {
         perror("realloc failed, could not resize accounts");
         exit(1);
     }
-    bank->accs = new_accounts;
-    bank->capacity = new_capacity;
+
+    BANK.accs = new_accounts;
+    BANK.capacity = new_capacity;
 
     printf("Bank capacity resized to %d\n", new_capacity);
 }
 
-void deposit(bank* bank, account* acc, unsigned int deposit_amount)
+void deposit(account* acc, const unsigned int deposit_amount)
 {
-    acc->balance += deposit_amount;
-    bank->cash += deposit_amount;
+    acc->balance -= deposit_amount;
+    BANK.cash += deposit_amount;
 
     printf("Deposited amount of %d to %s\n", deposit_amount, acc->owner);
 }
 
-void withdraw(bank* bank, account* acc, unsigned int withdraw_amount)
+void withdraw(account* acc, const unsigned int withdraw_amount)
 {
     if (acc->balance < withdraw_amount)
     {
@@ -94,16 +107,17 @@ void withdraw(bank* bank, account* acc, unsigned int withdraw_amount)
     }
 
     acc->balance -= withdraw_amount;
-    bank->cash -= withdraw_amount;
+    BANK.cash -= withdraw_amount;
 
     printf("Withdrew amount of %d from %s\n", withdraw_amount, acc->owner);
 }
 
-void print_acc(account* acc)
+void print_acc(const account* acc)
 {
     RPC_CSTR uuidStr = NULL;
     printf("%s : %d\n", acc->owner, acc->balance);
-    if (UuidToStringA(&acc->uuid, &uuidStr) != RPC_S_OK)
+    UUID t_uuid = get_account_uuid(acc);
+    if (UuidToStringA(&t_uuid, &uuidStr) != RPC_S_OK)
     {
         fprintf(stderr, "Failed to convert UUID to string\n");
         return;
@@ -112,60 +126,60 @@ void print_acc(account* acc)
     RpcStringFreeA(&uuidStr);
 }
 
-void print_bank(bank* bank)
+void print_bank()
 {
     printf("Accounts: \n");
-    for (int i = 0; i < bank->size; i++)
+    for (int i = 0; i < BANK.size; i++)
     {
-        print_acc(&bank->accs[i]);
+        print_acc(&BANK.accs[i]);
     }
-    printf("Current cash: %d\n", bank->cash);
-    printf("Current size: %d\n", bank->size);
-    printf("Current capacity: %d\n", bank->capacity);
+    printf("Current cash: %d\n", BANK.cash);
+    printf("Current size: %d\n", BANK.size);
+    printf("Current capacity: %d\n", BANK.capacity);
 }
 
-account* search_account(bank* bank, const char* owner)
+account* search_account(const char* owner)
 {
-    for (int i = 0; i < bank->size; i++)
+    for (int i = 0; i < BANK.size; i++)
     {
-        if (strcmp(bank->accs[i].owner, owner) == 0)
+        if (strcmp(BANK.accs[i].owner, owner) == 0)
         {
-            return &bank->accs[i];
+            return &BANK.accs[i];
         }
     }
     return NULL;
 }
 
-void transfer_money(account* transferrer, account* transferree, unsigned int amount)
+void transfer_money(account* from, account* to, const unsigned int amount)
 {
-    if (transferrer->balance < amount)
+    if (from->balance < amount)
     {
         printf("Transfer amount is greater than the balance in transferrer\n");
         return;
     }
 
-    transferrer->balance -= amount;
-    transferree->balance += amount;
+    from->balance -= amount;
+    to->balance += amount;
 
-    printf("Money transferred from %s to %s of amount %d\n", transferrer->owner, transferree->owner, amount);
+    printf("Money transferred from %s to %s of amount %d\n", from->owner, to->owner, amount);
 }
 
-void free_bank(bank* bank)
+void free_bank()
 {
-    if (!bank || !bank->accs)
+    if (!BANK.accs)
     {
         return;
     }
 
-    for (int i = 0; i < bank->size; i++)
+    for (int i = 0; i < BANK.size; i++)
     {
-        free_account(&bank->accs[i]);
+        free_account(&BANK.accs[i]);
     }
 
-    free(bank->accs);
+    free(BANK.accs);
 
-    bank->accs = NULL;
-    bank->size = 0;
-    bank->capacity = 0;
-    bank->cash = 0;
+    BANK.accs = NULL;
+    BANK.size = 0;
+    BANK.capacity = 0;
+    BANK.cash = 0;
 }

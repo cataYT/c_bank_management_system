@@ -2,8 +2,8 @@
 
 void create_uuid(account* acc)
 {
-    RPC_STATUS status = UuidCreate(&acc->uuid);
-    printf("UuidCreate status: %ld\n", status);
+    RPC_STATUS status = UuidCreate(&acc->_uuid);
+    // printf("UuidCreate status: %ld\n", status);
 
     if (status != RPC_S_OK && status != RPC_S_UUID_LOCAL_ONLY)
     {
@@ -12,7 +12,7 @@ void create_uuid(account* acc)
     }
 }
 
-account create_account(const char* owner_name, int starting_balance)
+account create_account(const char* owner_name, const int starting_balance)
 {
     account acc = {NULL, 0};
     acc.owner = malloc(strlen(owner_name) + 1);
@@ -25,6 +25,11 @@ account create_account(const char* owner_name, int starting_balance)
     acc.balance = starting_balance;
     create_uuid(&acc);
     return acc;
+}
+
+UUID get_account_uuid(const account* acc)
+{
+    return acc->_uuid;
 }
 
 void free_account(account* acc)

@@ -1,26 +1,16 @@
-#ifndef BANK_H
-#define BANK_H
+#pragma once
 
 #include "account.h"
 
-typedef struct bank
-{
-    account* accs;
-    int cash;
-    int size;
-    int capacity;
-} bank;
+typedef struct bank bank;
 
-// Function declarations using the opaque type `bank*`
-bank* create_bank(int starting_cash, unsigned int capacity);
-void add_account(bank* bank, const account* acc);
-account* search_account(bank* bank, const char* owner);
-void deposit(bank* bank, account* acc, unsigned int amount);
-void withdraw(bank* bank, account* acc, unsigned int amount);
-void transfer_money(account* transferrer, account* transferee, unsigned int amount);
-void print_acc(account* acc);
-void print_bank(bank* bank);
-void resize_bank(bank* bank, unsigned int new_capacity);
-void free_bank(bank* bank);
-
-#endif // BANK_H
+void create_bank(const int starting_cash, const unsigned int capacity);
+void add_account(account* acc);
+account* search_account(const char* owner);
+void deposit(account* acc, const unsigned int amount);
+void withdraw(account* acc, const unsigned int amount);
+void transfer_money(account* transferrer, account* transferee, const unsigned int amount);
+void print_acc(const account* acc);
+void print_bank();
+void resize_bank(unsigned const int new_capacity);
+void free_bank();
