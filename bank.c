@@ -1,28 +1,37 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "bank.h"
 #include "account.h"
 #include "vector.h"
 
-typedef struct bank
+struct bank
 {
-    vector accs;
+    struct vector accs;
     int cash;
     int size;
     int capacity;
-} bank;
+};
 
-static bank BANK = {NULL, 0, 0, 0};
+static struct bank BANK = {NULL, 0, 0, 0};
 static int initialized = 0;
 
 void create_bank(const int starting_cash, const unsigned int capacity)
 {
+    if (capacity <= 0)
+    {
+        fprintf(stderr, "capacity cannot be 0 or negative");
+        return;
+    }
+
     if (initialized && capacity != BANK.capacity)
     {
         fprintf(stderr, "Bank already initialized with different capacity.\n");
+        return;
     }
 
     if (!initialized)
     {
-        BANK.accs = create_vector(capacity, sizeof(account));
+        BANK.accs = create_vector(capacity, sizeof(struct account));
         BANK.cash = starting_cash;
         BANK.size = 0;
         BANK.capacity = capacity;
@@ -107,7 +116,7 @@ void transaction_log(const char* type, ...)
 
 // Takes ownership of account so it will invalidate previous pointer.
 // Create them temporary and then access them from bank for valid account.
-void add_account(account* acc)
+void add_account(struct account* acc)
 {
     const char* owner = acc->owner;
 
@@ -123,7 +132,7 @@ void add_account(account* acc)
     transaction_log("add", owner);
 }
 
-void deposit(account* acc, const unsigned int deposit_amount)
+void deposit(struct account* acc, const unsigned int deposit_amount)
 {
     acc->balance += deposit_amount;
     BANK.cash += deposit_amount;
@@ -134,7 +143,7 @@ void deposit(account* acc, const unsigned int deposit_amount)
     transaction_log("deposit", owner, deposit_amount);
 }
 
-void withdraw(account* acc, const unsigned int withdraw_amount)
+void withdraw(struct account* acc, const unsigned int withdraw_amount)
 {
     if (acc->balance < withdraw_amount)
     {
@@ -151,7 +160,7 @@ void withdraw(account* acc, const unsigned int withdraw_amount)
     transaction_log("withdraw", owner, withdraw_amount);
 }
 
-void print_acc(const account* acc)
+void print_acc(const struct account* acc)
 {
     RPC_CSTR uuidStr = NULL;
     printf("%s : %d\n", acc->owner, acc->balance);
@@ -170,7 +179,7 @@ void print_bank()
     printf("Accounts: \n");
     for (int i = 0; i < BANK.accs.size; i++)
     {
-        account* acc = &((account*)BANK.accs.items)[i];
+        struct account* acc = &((struct account*)BANK.accs.items)[i];
         print_acc(acc);
     }
     printf("Current cash: %d\n", BANK.cash);
@@ -178,12 +187,12 @@ void print_bank()
     printf("Current capacity: %d\n", BANK.accs.capacity);
 }
 
-account* search_account(const char* owner)
+struct account* search_account(const char* owner)
 {
     for (int i = 0; i < BANK.accs.size; i++)
     {
-        account* accs = BANK.accs.items;
-        account* acc = &accs[i];
+        struct account* accs = BANK.accs.items;
+        struct account* acc = &accs[i];
         if (strcmp(acc->owner, owner) == 0)
         {
             return acc;
@@ -192,7 +201,7 @@ account* search_account(const char* owner)
     return NULL;
 }
 
-void transfer_money(account* from, account* to, const unsigned int amount)
+void transfer_money(struct account* from, struct account* to, const unsigned int amount)
 {
     if (from->balance < amount)
     {
@@ -214,8 +223,8 @@ void free_bank()
 {
     for (int i = 0; i < BANK.accs.size; i++)
     {
-        account* accs = BANK.accs.items;
-        account* acc = &accs[i];
+        struct account* accs = BANK.accs.items;
+        struct account* acc = &accs[i];
         free_account(acc);
     }
 
