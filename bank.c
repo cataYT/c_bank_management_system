@@ -30,6 +30,81 @@ void create_bank(const int starting_cash, const unsigned int capacity)
     }
 }
 
+void transaction_log(const char* type, ...)
+{
+    va_list args;
+    va_start(args, type);
+
+    FILE* file = fopen("logs.txt", "a");
+    if (file == NULL) 
+    {
+        perror("Failed to open file.\n");
+        va_end(args);
+        return;
+    }
+
+    if (strcmp(type, "add") == 0)
+    {
+        const char* name = va_arg(args, const char*);
+        if (!name)
+        {
+            fprintf(stderr, "Null name in 'add'.\n");
+        }
+        else
+        {
+            fprintf(file, "Transaction: Added account %s.\n", name);
+        }
+    }
+    else if (strcmp(type, "deposit") == 0)
+    {
+        const char* name = va_arg(args, const char*);
+        const unsigned int amount = va_arg(args, const unsigned int);
+        if (!name)
+        {
+            fprintf(stderr, "Null name in 'deposit'.\n");
+        }
+        else
+        {
+            fprintf(file, "Transaction: Deposited amount %d by %s.\n", amount, name);
+        }
+    }
+    else if (strcmp(type, "withdraw") == 0)
+    {
+        const char* name = va_arg(args, const char*);
+        const unsigned int amount = va_arg(args, const unsigned int);
+        if (!name)
+        {
+            fprintf(stderr, "Null name in 'withdraw'.\n");
+        }
+        else
+        {
+            fprintf(file, "Transaction: Withdrew amount %d from %s.\n", amount, name);
+        }
+    }
+    else if (strcmp(type, "transfer") == 0)
+    {
+        const char* from = va_arg(args, const char*);
+        const char* to = va_arg(args, const char*);
+        int amount = va_arg(args, int);
+
+        if (!from || !to)
+        {
+            fprintf(stderr, "Null name(s) in 'transfer'.\n");
+        }
+        else
+        {
+            fprintf(file, "Transaction: Transferred amount %d from %s to %s.\n", amount, from, to);
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Unknown transaction type: %s\n", type);
+    }
+
+    fclose(file);
+    va_end(args);
+}
+
 // Takes ownership of account so it will invalidate previous pointer.
 // Create them temporary and then access them from bank for valid account.
 void add_account(account* acc)
@@ -44,6 +119,8 @@ void add_account(account* acc)
 
     push_back(&BANK.accs, acc);
     BANK.size++;
+
+    transaction_log("add", owner);
 }
 
 void deposit(account* acc, const unsigned int deposit_amount)
@@ -51,7 +128,10 @@ void deposit(account* acc, const unsigned int deposit_amount)
     acc->balance += deposit_amount;
     BANK.cash += deposit_amount;
 
-    printf("Deposited amount of %d to %s\n", deposit_amount, acc->owner);
+    const char* owner = acc->owner;
+
+    printf("Deposited amount of %d to %s\n", deposit_amount, owner);
+    transaction_log("deposit", owner, deposit_amount);
 }
 
 void withdraw(account* acc, const unsigned int withdraw_amount)
@@ -65,7 +145,10 @@ void withdraw(account* acc, const unsigned int withdraw_amount)
     acc->balance -= withdraw_amount;
     BANK.cash -= withdraw_amount;
 
-    printf("Withdrew amount of %d from %s\n", withdraw_amount, acc->owner);
+    const char* owner = acc->owner;
+
+    printf("Withdrew amount of %d from %s\n", withdraw_amount, owner);
+    transaction_log("withdraw", owner, withdraw_amount);
 }
 
 void print_acc(const account* acc)
@@ -120,7 +203,11 @@ void transfer_money(account* from, account* to, const unsigned int amount)
     from->balance -= amount;
     to->balance += amount;
 
-    printf("Money transferred from %s to %s of amount %d\n", from->owner, to->owner, amount);
+    const char* from_owner = from->owner;
+    const char* to_owner = to->owner;
+
+    printf("Money transferred from %s to %s of amount %d\n", from_owner, to_owner, amount);
+    transaction_log("transfer", from_owner, to_owner, amount);
 }
 
 void free_bank()
@@ -137,4 +224,13 @@ void free_bank()
     BANK.size = 0;
     BANK.capacity = 0;
     BANK.cash = 0;
+
+    /* FILE* file = fopen("logs.txt", "w");
+    if (!file)
+    {
+        perror("failed to clear logs");
+        exit(1);
+    }
+
+    fclose(file); */
 }

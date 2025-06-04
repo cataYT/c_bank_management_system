@@ -1,10 +1,12 @@
 #pragma once
 
 #include "account.h"
+#include <stdarg.h>
 
 typedef struct bank bank;
 
 void create_bank(const int starting_cash, const unsigned int capacity);
+void transaction_log(const char* type, ...);
 void add_account(account* acc);
 account* search_account(const char* owner);
 void deposit(account* acc, const unsigned int amount);
