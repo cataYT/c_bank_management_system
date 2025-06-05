@@ -44,7 +44,7 @@ void transaction_log(const char* type, ...)
     va_list args;
     va_start(args, type);
 
-    FILE* file = fopen("logs.txt", "a");
+    FILE* file = fopen("../../build/logs.txt", "a");
     if (file == NULL) 
     {
         perror("Failed to open file.\n");
@@ -133,7 +133,6 @@ void add_account(struct account* acc)
     push_back(&BANK.accs, acc);
 
     transaction_log("add", owner);
-    free_account(acc);
     BANK.size++;
 }
 

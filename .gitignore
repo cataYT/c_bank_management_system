@@ -1,9 +1,3 @@
-main.exe
-main.obj
-main.pdb
-vc140.pdb
-account.obj
-bank.obj
-vector.obj
+/build
 /.vscode
-ideas.txt
+main.ilk
