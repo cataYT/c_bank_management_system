@@ -1,8 +1,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "bank.h"
-#include "account.h"
-#include "vector.h"
+#include "../account/account.h"
+#include "../vector/vector.h"
 
 struct bank
 {

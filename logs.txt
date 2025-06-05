@@ -1,0 +1,5 @@
+Transaction: Added account Cata.
+Transaction: Added account Nullify.
+Transaction: Deposited amount 1000 by Cata.
+Transaction: Withdrew amount 100 from Cata.
+Transaction: Transferred amount 100 from Cata to Nullify.

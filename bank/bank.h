@@ -1,6 +1,6 @@
 #pragma once
 
-#include "account.h"
+#include "../account/account.h"
 
 void create_bank(const int starting_cash, const unsigned int capacity);
 void transaction_log(const char* type, ...);
