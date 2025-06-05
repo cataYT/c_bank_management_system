@@ -110,7 +110,11 @@ void transaction_log(const char* type, ...)
         fprintf(stderr, "Unknown transaction type: %s\n", type);
     }
 
-    fclose(file);
+    if (fclose(file) != 0)
+    {
+        fprintf(stderr, "failed to close file\n");
+    }
+    file = NULL;
     va_end(args);
 }
 
@@ -127,9 +131,10 @@ void add_account(struct account* acc)
     }
 
     push_back(&BANK.accs, acc);
-    BANK.size++;
 
     transaction_log("add", owner);
+    free_account(acc);
+    BANK.size++;
 }
 
 void deposit(struct account* acc, const unsigned int deposit_amount)
@@ -171,7 +176,12 @@ void print_acc(const struct account* acc)
         return;
     }
     printf("UUID: %s\n", uuidStr);
-    RpcStringFreeA(&uuidStr);
+    RPC_STATUS status = RpcStringFreeA(&uuidStr);
+    if (status != RPC_S_OK)
+    {
+        fprintf(stderr, "Failed to free RPC string: %lu\n", status);
+    }
+    uuidStr = NULL;
 }
 
 void print_bank()
@@ -226,9 +236,12 @@ void free_bank()
         struct account* accs = BANK.accs.items;
         struct account* acc = &accs[i];
         free_account(acc);
+        acc = NULL;
     }
 
     free_vector(&BANK.accs);
+
+    BANK.accs = (struct vector){NULL, 0, 0, 0};
 
     BANK.size = 0;
     BANK.capacity = 0;
