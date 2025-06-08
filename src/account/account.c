@@ -4,13 +4,10 @@
 #include <rpc.h>
 #include "account.h"
 
-#define NULL_UUID (UUID){0}
-#define NULL_ACCOUNT (struct account){NULL, 0, NULL_UUID}
-
-const bool create_uuid(struct account *acc)
+bool create_uuid(struct account *acc)
 {
     if (!acc) {
-        fprintf(stderr, "account is null, cannot create uuid\n");
+        fprintf(stderr, "account is null at create_uuid()\n");
         return false;
     }
     RPC_STATUS status = UuidCreate(&acc->_uuid);
@@ -24,37 +21,36 @@ const bool create_uuid(struct account *acc)
     return true;
 }
 
-struct account create_account(const char *owner_name, const int starting_balance)
+bool create_account(const char *owner_name, const int starting_balance, struct account *acc)
 {
     if (!owner_name || strlen(owner_name) == 0) {
-        fprintf(stderr, "owner name is null, cannot create account\n");
-        return NULL_ACCOUNT;
+        fprintf(stderr, "owner name is null at create_account()\n");
+        return false;
     }
 
     if (!starting_balance) {
-        fprintf(stderr, "starting balance is null, cannot create account\n");
-        return NULL_ACCOUNT;
+        fprintf(stderr, "starting balance is null at create_account()\n");
+        return false;
     }
 
-    struct account acc = NULL_ACCOUNT;
-    acc.owner = malloc(strlen(owner_name) + 1);
-    if (!acc.owner) {
-        fprintf(stderr, "malloc failed");
-        return NULL_ACCOUNT;
+    acc->owner = malloc(strlen(owner_name) + 1);
+    if (!acc->owner) {
+        fprintf(stderr, "malloc failed at create_account()\n");
+        return false;
     }
-    strcpy(acc.owner, owner_name);
-    acc.balance = starting_balance;
-    if (!create_uuid(&acc)) {
-        return NULL_ACCOUNT;
+    strcpy(acc->owner, owner_name);
+    acc->balance = starting_balance;
+    if (!create_uuid(acc)) {
+        return false;
     }
     return acc;
 }
 
-UUID get_account_uuid(const struct account *acc)
+const UUID get_account_uuid(const struct account *acc)
 {
     if (!acc) {
-        fprintf(stderr, "account is null, cannot get uuid\n");
-        return NULL_UUID;
+        fprintf(stderr, "account is null at get_account_uuid()\n");
+        return (UUID){0};
     }
     return acc->_uuid;
 }
@@ -66,19 +62,20 @@ void print_acc(const struct account *acc)
     UUID t_uuid = get_account_uuid(acc);
     if (UuidToStringA(&t_uuid, &uuidStr) != RPC_S_OK)
     {
-        fprintf(stderr, "Failed to convert UUID to string\n");
+        fprintf(stderr, "failed to convert uuid to string at get_account_uuid()\n");
         return;
     }
     printf("UUID: %s\n", uuidStr);
     RPC_STATUS status = RpcStringFreeA(&uuidStr);
     if (status != RPC_S_OK)
     {
-        fprintf(stderr, "Failed to free RPC string: %lu\n", status);
+        fprintf(stderr, "failed to free RPC string: %lu\n", status);
     }
     uuidStr = NULL;
 }
 
-const bool check_null_account(struct account *acc) {
+bool check_null_account(struct account *acc)
+{
     RPC_STATUS temp_status = 0;
     if (!acc->owner || UuidIsNil(&acc->_uuid, &temp_status)) {
         return true;
@@ -87,10 +84,9 @@ const bool check_null_account(struct account *acc) {
     return false;
 }
 
-const bool free_account(struct account *acc)
+bool free_account(struct account *acc)
 {
     if (!acc) {
-        fprintf(stderr, "account is null, cannot free\n");
         return false;
     }
 

@@ -5,35 +5,41 @@
 #include "../account/account.h"
 #include "../vector/vector.h"
 
-struct bank
-{
+struct bank {
     struct vector accs;
     int cash;
     size_t size;
     size_t capacity;
 };
 
+enum transaction {
+    Add,
+    Deposit,
+    Withdraw,
+    Transfer
+};
+
 static struct bank BANK = {NULL, 0, 0, 0};
 static int initialized = 0;
 
-const bool create_bank(const int starting_cash, const size_t capacity)
+bool create_bank(const int starting_cash, const size_t capacity)
 {
-    if (capacity <= 0)
+    if (capacity == 0)
     {
-        fprintf(stderr, "capacity cannot be 0 or negative");
+        fprintf(stderr, "capacity is 0 at create_bank()");
         return false;
     }
 
     if (initialized && capacity != BANK.capacity)
     {
-        fprintf(stderr, "Bank already initialized with different capacity.\n");
+        fprintf(stderr, "bank already initialized with different capacity at create_bank()\n");
         return false;
     }
 
     if (!initialized)
     {
-        BANK.accs = create_vector(capacity, sizeof(struct account));
-        if (check_null_vector(&BANK.accs)) {
+        create_vector(capacity, sizeof(struct account), &BANK.accs);
+        if (vector_is_null(&BANK.accs)) {
             return false;
         }
         BANK.cash = starting_cash;
@@ -45,10 +51,10 @@ const bool create_bank(const int starting_cash, const size_t capacity)
     return true;
 }
 
-const bool transaction_log(const char *type, ...)
+bool transaction_log(enum transaction type, ...)
 {
-    if (!type || strlen(type) == 0) {
-        fprintf(stderr, "found type of transaction null in transaction_log()\n");
+    if (type < 0 || type > Transfer) {
+        fprintf(stderr, "invalid transaction type at transaction_log()\n");
         return false;
     }
 
@@ -56,112 +62,114 @@ const bool transaction_log(const char *type, ...)
     va_start(args, type);
 
     FILE *file = fopen("logs.txt", "a");
-    if (file == NULL) 
+    if (file == NULL)
     {
-        fprintf(stderr, "Failed to open file.\n");
+        fprintf(stderr, "failed to open log file at transaction_log()\n");
         va_end(args);
         return false;
     }
 
-    if (strcmp(type, "add") == 0)
-    {
-        const char *name = va_arg(args, const char *);
-        if (!name)
+    switch (type) {
+        case Add: 
         {
-            fprintf(stderr, "Null name in 'add'.\n");
-            return false;
+            const char *name = va_arg(args, const char *);
+            if (!name)
+            {
+                fprintf(stderr, "null name at transaction_log()\n");
+                return false;
+            }
+            else
+            {
+                fprintf(file, "Transaction: Added account %s.\n", name);
+                return true;
+            }
         }
-        else
+        case Deposit:
         {
-            fprintf(file, "Transaction: Added account %s.\n", name);
-            return true;
+            const char *name = va_arg(args, const char *);
+            const unsigned int amount = va_arg(args, const unsigned int);
+            if (!name)
+            {
+                fprintf(stderr, "null name at transaction_log()\n");
+                return false;
+            }
+            else
+            {
+                fprintf(file, "Transaction: Deposited amount %d by %s.\n", amount, name);
+                return true;
+            }
         }
-    }
-    else if (strcmp(type, "deposit") == 0)
-    {
-        const char *name = va_arg(args, const char *);
-        const unsigned int amount = va_arg(args, const unsigned int);
-        if (!name)
+        case Withdraw:
         {
-            fprintf(stderr, "Null name in 'deposit'.\n");
-            return false;
+            const char *name = va_arg(args, const char *);
+            const unsigned int amount = va_arg(args, const unsigned int);
+            if (!name)
+            {
+                fprintf(stderr, "null name at transaction_log()\n");
+                return false;
+            }
+            else
+            {
+                fprintf(file, "Transaction: Withdrew amount %d from %s.\n", amount, name);
+                return true;
+            }
         }
-        else
+        case Transfer:
         {
-            fprintf(file, "Transaction: Deposited amount %d by %s.\n", amount, name);
-            return true;
-        }
-    }
-    else if (strcmp(type, "withdraw") == 0)
-    {
-        const char *name = va_arg(args, const char *);
-        const unsigned int amount = va_arg(args, const unsigned int);
-        if (!name)
-        {
-            fprintf(stderr, "Null name in 'withdraw'.\n");
-            return false;
-        }
-        else
-        {
-            fprintf(file, "Transaction: Withdrew amount %d from %s.\n", amount, name);
-            return true;
-        }
-    }
-    else if (strcmp(type, "transfer") == 0)
-    {
-        const char *from = va_arg(args, const char *);
-        const char *to = va_arg(args, const char *);
-        const unsigned int amount = va_arg(args, const unsigned int);
+            const char *from = va_arg(args, const char *);
+            const char *to = va_arg(args, const char *);
+            const unsigned int amount = va_arg(args, const unsigned int);
 
-        if (!from || !to)
+            if (!from || !to)
+            {
+                fprintf(stderr, "null name(s) at transaction_log()\n");
+                return false;
+            }
+            else
+            {
+                fprintf(file, "Transaction: Transferred amount %d from %s to %s.\n", amount, from, to);
+                return true;
+            }
+        }
+        default:
         {
-            fprintf(stderr, "Null name(s) in 'transfer'.\n");
+            fprintf(stderr, "unknown transaction type at transaction_log(): %d\n", type);
             return false;
         }
-        else
-        {
-            fprintf(file, "Transaction: Transferred amount %d from %s to %s.\n", amount, from, to);
-            return true;
-        }
-    }
-    else
-    {
-        fprintf(stderr, "Unknown transaction type: %s\n", type);
-        return false;
     }
 
     if (fclose(file) != 0)
     {
-        fprintf(stderr, "failed to close file\n");
+        fprintf(stderr, "failed to close file at transaction_log()\n");
         return false;
     }
     file = NULL;
     va_end(args);
 }
 
-struct account *search_account(const char *owner)
+bool get_account(const char *owner, struct account *acc)
 {
     for (int i = 0; i < BANK.accs.size; i++) {
-        struct account *accs = BANK.accs.items;
-        struct account *acc = &accs[i];
-        if (strcmp(acc->owner, owner) == 0) {
-            return acc;
+        struct account *b_accs = BANK.accs.items;
+        struct account *b_acc = &b_accs[i];
+        if (strcmp(b_acc->owner, owner) == 0) {
+            memcpy(acc, b_acc, sizeof(struct account));
+            return true;
         }
     }
-    return NULL;
+    return false;
 }
 
 // Takes ownership of account so it will invalidate previous pointer.
 // Create them temporary and then access them from bank for valid account.
-const bool add_account(const struct account *acc)
+bool add_account(const struct account *acc)
 {
     if (!acc) {
         fprintf(stderr, "account is null at add_account()\n");
         return false;
     }
-
-    if (search_account(acc->owner))
-    {
+    struct account _placeholder = {NULL};
+    if (get_account(acc->owner, &_placeholder)) {
         printf("Account with the name %s already exists.\n", acc->owner);
         return false;
     }
@@ -170,7 +178,7 @@ const bool add_account(const struct account *acc)
         return false;
     }
 
-    if (!transaction_log("add", acc->owner)) {
+    if (!transaction_log(Add, acc->owner)) {
         return false;
     }
 
@@ -179,7 +187,7 @@ const bool add_account(const struct account *acc)
     return true;
 }
 
-const bool deposit(struct account *acc, const unsigned int deposit_amount)
+bool deposit(struct account *acc, const unsigned int deposit_amount)
 {
     if (!acc) {
         fprintf(stderr, "account is null at deposit()\n");
@@ -195,14 +203,14 @@ const bool deposit(struct account *acc, const unsigned int deposit_amount)
     BANK.cash += deposit_amount;
 
     printf("Deposited amount of %d to %s\n", deposit_amount, acc->owner);
-    if (!transaction_log("deposit", acc->owner, deposit_amount)) {
+    if (!transaction_log(Deposit, acc->owner, deposit_amount)) {
         return false;
     }
 
     return true;
 }
 
-const bool withdraw(struct account *acc, const unsigned int withdraw_amount)
+bool withdraw(struct account *acc, const unsigned int withdraw_amount)
 {
     if (!acc) {
         fprintf(stderr, "account is null at withdraw()\n");
@@ -216,7 +224,7 @@ const bool withdraw(struct account *acc, const unsigned int withdraw_amount)
 
     if (acc->balance < withdraw_amount)
     {
-        printf("Withdrawal amount is greater than the balance!\n");
+        printf("withdrawal amount is greater than the balance at withdraw()\n");
         return false;
     }
 
@@ -224,7 +232,7 @@ const bool withdraw(struct account *acc, const unsigned int withdraw_amount)
     BANK.cash -= withdraw_amount;
 
     printf("Withdrew amount of %d from %s\n", withdraw_amount, acc->owner);
-    if (!transaction_log("withdraw", acc->owner, withdraw_amount)) {
+    if (!transaction_log(Withdraw, acc->owner, withdraw_amount)) {
         return false;
     }
 
@@ -243,7 +251,7 @@ void print_bank()
     printf("Current capacity: %d\n", BANK.accs.capacity);
 }
 
-const bool transfer_money(struct account *from, struct account *to, const unsigned int amount)
+bool transfer_money(struct account *from, struct account *to, const unsigned int amount)
 {
     if (!from) {
         fprintf(stderr, "from account is null at transfer_money()\n");
@@ -262,7 +270,7 @@ const bool transfer_money(struct account *from, struct account *to, const unsign
     
     if (from->balance < amount)
     {
-        printf("Transfer amount is greater than the balance in transferrer\n");
+        printf("transfer amount is greater than the balance at transfer_money()\n");
         return false;
     }
 
@@ -270,12 +278,12 @@ const bool transfer_money(struct account *from, struct account *to, const unsign
     to->balance += amount;
 
     printf("Money transferred from %s to %s of amount %d\n", from->owner, to->owner, amount);
-    transaction_log("transfer", from->owner, to->owner, amount);
+    transaction_log(Transfer, from->owner, to->owner, amount);
 
     return true;
 }
 
-const bool free_bank()
+bool free_bank()
 {
     for (int i = 0; i < BANK.accs.size; i++) {
         struct account *accs = BANK.accs.items;
@@ -289,8 +297,6 @@ const bool free_bank()
     if (!free_vector(&BANK.accs)) {
         return false;
     }
-
-    BANK.accs = NULL_VECTOR;
 
     BANK.size = 0;
     BANK.capacity = 0;

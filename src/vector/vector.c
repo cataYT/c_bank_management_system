@@ -3,39 +3,39 @@
 #include <string.h>
 #include "vector.h"
 
-struct vector create_vector(const size_t capacity, const size_t e_size)
+bool create_vector(const size_t capacity, const size_t e_size, struct vector *vec)
 {
-    if (capacity <= 0) {
-        fprintf(stderr, "capacity cannot be 0 or negative\n");
-        return NULL_VECTOR;
+    if (capacity == 0) {
+        fprintf(stderr, "capacity is 0 at create_vector()\n");
+        return false;
     }
 
-    if (e_size <= 0) {
-        fprintf(stderr, "element size cannot be 0 or negative\n");
-        return NULL_VECTOR;
+    if (e_size == 0) {
+        fprintf(stderr, "element size is 0 at create_vector()\n");
+        return false;
     }
 
-    struct vector vec = NULL_VECTOR;
-    vec.items = malloc(e_size * capacity);
-    if (!vec.items) {
-        fprintf(stderr, "failed to allocated memory for vector.\n");
-        return NULL_VECTOR;
+    vec->items = malloc(e_size * capacity);
+    if (!vec->items) {
+        fprintf(stderr, "malloc failed at create_vector()\n");
+        return false;
     }
-    vec.e_size = e_size;
-    memset(vec.items, 0, e_size);
-    vec.capacity = capacity;
-    return vec;
+    vec->e_size = e_size;
+    memset(vec->items, 0, e_size);
+    vec->capacity = capacity;
+
+    return true;
 }
 
-const bool push_back(struct vector *vec, const void *element)
+bool push_back(struct vector *vec, const void *element)
 {
     if (!vec) {
-        fprintf(stderr, "vector is null, cannot push\n");
+        fprintf(stderr, "vector is null at push_back()\n");
         return false;
     }
 
     if (!element) {
-        fprintf(stderr, "element is null, cannot push\n");
+        fprintf(stderr, "element is null at push_back()\n");
         return false;
     }
 
@@ -45,7 +45,7 @@ const bool push_back(struct vector *vec, const void *element)
 
         void *new_block = realloc(vec->items, vec->capacity * vec->e_size);
         if (!new_block) {
-            fprintf(stderr, "failed to extend vector\n");
+            fprintf(stderr, "realloc failed at push_back()\n");
             return false;
         }
         vec->items = new_block;
@@ -68,15 +68,15 @@ copying from right (higher memory address) to left (lower memory address)
                           ^ memcpy              ^ memcpy
 */
 
-const bool pop_search(struct vector *vec, const void *element)
+bool pop_search(struct vector *vec, const void *element)
 {
     if (!vec) {
-        fprintf(stderr, "vector is null, cannot pop\n");
+        fprintf(stderr, "vector is null at pop_search()\n");
         return false;
     }
 
     if (!element) {
-        fprintf(stderr, "element is null, cannot pop\n");
+        fprintf(stderr, "element is null at pop_search()\n");
         return false;
     }
 
@@ -99,18 +99,15 @@ const bool pop_search(struct vector *vec, const void *element)
         }
     }
 
-    return true;
-}
-
-const bool check_null_vector(struct vector *vec)
-{
-    if (vec->capacity == 0 || vec->e_size == 0 || vec->items == 0) {
-        return true;
-    }
     return false;
 }
 
-const bool free_vector(struct vector *vec)
+bool vector_is_null(struct vector *vec)
+{
+    return !vec || !vec->items || vec->e_size == 0 || vec->capacity == 0;
+}
+
+bool free_vector(struct vector *vec)
 {
     if (!vec) {
         return false;
