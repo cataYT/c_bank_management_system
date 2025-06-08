@@ -3,40 +3,40 @@
 #include <string.h>
 #include "vector.h"
 
-bool create_vector(const size_t capacity, const size_t e_size, struct vector *vec)
+enum vector_error create_vector(const size_t capacity, const size_t e_size, struct vector *vec)
 {
     if (capacity == 0) {
         fprintf(stderr, "capacity is 0 at create_vector()\n");
-        return false;
+        return ERR_VEC_CAPACITY;
     }
 
     if (e_size == 0) {
         fprintf(stderr, "element size is 0 at create_vector()\n");
-        return false;
+        return ERR_VEC_E_SIZE;
     }
 
     vec->items = malloc(e_size * capacity);
     if (!vec->items) {
         fprintf(stderr, "malloc failed at create_vector()\n");
-        return false;
+        return ERR_MALLOC_VEC;
     }
     vec->e_size = e_size;
     memset(vec->items, 0, e_size);
     vec->capacity = capacity;
 
-    return true;
+    return OK_VECTOR;
 }
 
-bool push_back(struct vector *vec, const void *element)
+enum vector_error push_back(struct vector *vec, const void *element)
 {
     if (!vec) {
         fprintf(stderr, "vector is null at push_back()\n");
-        return false;
+        return ERR_VEC_NULL;
     }
 
     if (!element) {
         fprintf(stderr, "element is null at push_back()\n");
-        return false;
+        return ERR_VEC_E;
     }
 
     if (vec->size >= vec->capacity) {
@@ -46,7 +46,7 @@ bool push_back(struct vector *vec, const void *element)
         void *new_block = realloc(vec->items, vec->capacity * vec->e_size);
         if (!new_block) {
             fprintf(stderr, "realloc failed at push_back()\n");
-            return false;
+            return ERR_REALLOC;
         }
         vec->items = new_block;
     }
@@ -56,7 +56,7 @@ bool push_back(struct vector *vec, const void *element)
     memcpy(dest, element, vec->e_size);
     vec->size++;
 
-    return true;
+    return OK_VECTOR;
 }
 
 /*
@@ -68,16 +68,16 @@ copying from right (higher memory address) to left (lower memory address)
                           ^ memcpy              ^ memcpy
 */
 
-bool pop_search(struct vector *vec, const void *element)
+enum vector_error pop_search(struct vector *vec, const void *element)
 {
     if (!vec) {
         fprintf(stderr, "vector is null at pop_search()\n");
-        return false;
+        return ERR_VEC_NULL;
     }
 
     if (!element) {
         fprintf(stderr, "element is null at pop_search()\n");
-        return false;
+        return ERR_VEC_E;
     }
 
     for (size_t i = 0; i < vec->size; i++) {
@@ -95,11 +95,11 @@ bool pop_search(struct vector *vec, const void *element)
             }
 
             vec->size--;
-            return true;  // Remove only the first match
+            return OK_VECTOR;  // Remove only the first match
         }
     }
 
-    return false;
+    return ERR_VEC_UNKNOWN;
 }
 
 bool vector_is_null(struct vector *vec)
@@ -107,10 +107,10 @@ bool vector_is_null(struct vector *vec)
     return !vec || !vec->items || vec->e_size == 0 || vec->capacity == 0;
 }
 
-bool free_vector(struct vector *vec)
+enum vector_error free_vector(struct vector *vec)
 {
     if (!vec) {
-        return false;
+        return ERR_VEC_NULL;
     }
     
     free(vec->items);
@@ -119,5 +119,5 @@ bool free_vector(struct vector *vec)
     vec->size = 0;
     vec->capacity = 0;
 
-    return true;
+    return OK_VECTOR;
 }
