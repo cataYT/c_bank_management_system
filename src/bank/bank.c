@@ -55,6 +55,8 @@ enum bank_error create_bank(const int starting_cash, const size_t capacity)
 
 enum bank_error transaction_log(enum transaction type, ...)
 {
+    enum bank_error result = OK_BANK;
+
     if (type < 0 || type > Transfer) {
         fprintf(stderr, "invalid transaction type at transaction_log()\n");
         return ERR_BANK_OPERATION_FAILED;
@@ -72,81 +74,72 @@ enum bank_error transaction_log(enum transaction type, ...)
     }
 
     switch (type) {
-        case Add: 
+        case Add:
         {
             const char *name = va_arg(args, const char *);
-            if (!name)
-            {
+            if (!name) {
                 fprintf(stderr, "null name at transaction_log()\n");
-                return ERR_BANK_OPERATION_FAILED;
+                result = ERR_BANK_OPERATION_FAILED;
+                goto cleanup;
             }
-            else
-            {
-                fprintf(file, "Transaction: Added account %s.\n", name);
-                return OK_BANK;
-            }
+            fprintf(file, "Transaction: Added account %s.\n", name);
+            break;
         }
         case Deposit:
         {
             const char *name = va_arg(args, const char *);
             const unsigned int amount = va_arg(args, const unsigned int);
-            if (!name)
-            {
+            if (!name) {
                 fprintf(stderr, "null name at transaction_log()\n");
-                return ERR_BANK_OPERATION_FAILED;
+                result = ERR_BANK_OPERATION_FAILED;
+                goto cleanup;
             }
-            else
-            {
-                fprintf(file, "Transaction: Deposited amount %d by %s.\n", amount, name);
-                return OK_BANK;
-            }
+            fprintf(file, "Transaction: Deposited amount %u by %s.\n", amount, name);
+            break;
         }
         case Withdraw:
         {
             const char *name = va_arg(args, const char *);
             const unsigned int amount = va_arg(args, const unsigned int);
-            if (!name)
-            {
+            if (!name) {
                 fprintf(stderr, "null name at transaction_log()\n");
-                return ERR_BANK_OPERATION_FAILED;
+                result = ERR_BANK_OPERATION_FAILED;
+                goto cleanup;
             }
-            else
-            {
-                fprintf(file, "Transaction: Withdrew amount %d from %s.\n", amount, name);
-                return OK_BANK;
-            }
+            fprintf(file, "Transaction: Withdrew amount %u from %s.\n", amount, name);
+            break;
         }
         case Transfer:
         {
             const char *from = va_arg(args, const char *);
             const char *to = va_arg(args, const char *);
             const unsigned int amount = va_arg(args, const unsigned int);
-
-            if (!from || !to)
-            {
+            if (!from || !to) {
                 fprintf(stderr, "null name(s) at transaction_log()\n");
-                return ERR_BANK_OPERATION_FAILED;
+                result = ERR_BANK_OPERATION_FAILED;
+                goto cleanup;
             }
-            else
-            {
-                fprintf(file, "Transaction: Transferred amount %d from %s to %s.\n", amount, from, to);
-                return OK_BANK;
-            }
+            fprintf(file, "Transaction: Transferred amount %u from %s to %s.\n", amount, from, to);
+            break;
         }
         default:
         {
             fprintf(stderr, "unknown transaction type at transaction_log(): %d\n", type);
-            return ERR_BANK_OPERATION_FAILED;
+            result = ERR_BANK_OPERATION_FAILED;
+            goto cleanup;
         }
     }
 
-    if (fclose(file) != 0)
-    {
-        fprintf(stderr, "failed to close file at transaction_log()\n");
-        return ERR_BANK_OPERATION_FAILED;
+cleanup:
+    if (file) {
+        if (fclose(file) != 0) {
+            fprintf(stderr, "failed to close file at transaction_log()\n");
+            result = ERR_BANK_OPERATION_FAILED;
+        }
     }
     file = NULL;
     va_end(args);
+    return result;
 }
 
 bool get_account(const char *owner, struct account *acc)
