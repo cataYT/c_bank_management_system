@@ -5,6 +5,12 @@
 #include "account.h"
 #include "account_codes.h"
 
+/**
+ * @enum Create an uuid for the account.
+ * 
+ * @param[in] acc Pointer to the account struct.
+ * @return OK_ACCOUNT_UUID if successful, ERR_ACCOUNT_NULL or ERR_ACCOUNT_UUID otherwise.
+ */
 enum account_error create_uuid(struct account *acc)
 {
     if (!acc) {
@@ -22,16 +28,11 @@ enum account_error create_uuid(struct account *acc)
     return OK_ACCOUNT_UUID;
 }
 
-enum account_error create_account(const char *owner_name, const int starting_balance, struct account *acc)
+enum account_error account_initialize(const char *owner_name, const int starting_balance, struct account *acc)
 {
     if (!owner_name || strlen(owner_name) == 0) {
         fprintf(stderr, "owner name is null at create_account()\n");
         return ERR_ACCOUNT_OWNER;
-    }
-
-    if (!starting_balance) {
-        fprintf(stderr, "starting balance is null at create_account()\n");
-        return ERR_ACCOUNT_BALANCE;
     }
 
     acc->owner = malloc(strlen(owner_name) + 1);
@@ -47,7 +48,7 @@ enum account_error create_account(const char *owner_name, const int starting_bal
     return OK_ACCOUNT;
 }
 
-const UUID get_account_uuid(const struct account *acc)
+const UUID account_get_uuid(const struct account *acc)
 {
     if (!acc) {
         fprintf(stderr, "account is null at get_account_uuid()\n");
@@ -56,11 +57,11 @@ const UUID get_account_uuid(const struct account *acc)
     return acc->_uuid;
 }
 
-enum account_error print_acc(const struct account *acc)
+enum account_error account_print_account(const struct account *acc)
 {
     RPC_CSTR uuidStr = NULL;
     printf("%s : %d\n", acc->owner, acc->balance);
-    UUID t_uuid = get_account_uuid(acc);
+    UUID t_uuid = account_get_uuid(acc);
     if (UuidToStringA(&t_uuid, &uuidStr) != RPC_S_OK)
     {
         fprintf(stderr, "failed to convert uuid to string at get_account_uuid()\n");
@@ -77,7 +78,7 @@ enum account_error print_acc(const struct account *acc)
     return OK_ACCOUNT;
 }
 
-bool check_null_account(struct account *acc)
+bool account_check_null(struct account *acc)
 {
     RPC_STATUS temp_status = 0;
     if (!acc->owner || UuidIsNil(&acc->_uuid, &temp_status)) {
@@ -87,7 +88,7 @@ bool check_null_account(struct account *acc)
     return false;
 }
 
-enum account_error free_account(struct account *acc)
+enum account_error account_deinitialize(struct account *acc)
 {
     if (!acc) {
         return ERR_ACCOUNT_NULL;

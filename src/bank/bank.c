@@ -5,15 +5,22 @@
 #include "../account/account.h"
 #include "../account/account_codes.h"
 #include "../vector/vector.h"
-#include "../vector/vector_codes.h"
 
+/**
+ * @struct Bank struct to hold and manage accounts.
+ * 
+ */
 struct bank {
-    struct vector accs;
-    int cash;
-    size_t size;
-    size_t capacity;
+    struct vector accs; /** Vector to hold the accounts. */
+    int cash;           /** Current cash of the bank. */
+    size_t size;        /** Current accounts in the bank. */
+    size_t capacity;    /** Capacity of the bank to hold accounts. */
 };
 
+/**
+ * @enum Enum for logging different transactions.
+ * 
+ */
 enum transaction {
     Add,
     Deposit,
@@ -24,7 +31,7 @@ enum transaction {
 static struct bank BANK = {NULL, 0, 0, 0};
 static int initialized = 0;
 
-enum bank_error create_bank(const int starting_cash, const size_t capacity)
+enum bank_error bank_initialize(const int starting_cash, const size_t capacity)
 {
     if (capacity == 0)
     {
@@ -40,8 +47,7 @@ enum bank_error create_bank(const int starting_cash, const size_t capacity)
 
     if (!initialized)
     {
-        create_vector(capacity, sizeof(struct account), &BANK.accs);
-        if (vector_is_null(&BANK.accs)) {
+        if (!vector_initialize(capacity, sizeof(struct account), &BANK.accs)) {
             return ERR_BANK_OPERATION_FAILED;
         }
         BANK.cash = starting_cash;
@@ -53,6 +59,13 @@ enum bank_error create_bank(const int starting_cash, const size_t capacity)
     return OK_BANK;
 }
 
+/**
+ * @brief Used internally by bank functions to log into logs.txt.
+ * 
+ * @param[in] type Type of transaction occuring.
+ * @param[in] ... Used for getting accounts and amount.
+ * @return OK_BANK if successful, ERR_BANK_OPERATION_FAILED otherwise.
+ */
 enum bank_error transaction_log(enum transaction type, ...)
 {
     enum bank_error result = OK_BANK;
@@ -142,7 +155,7 @@ cleanup:
     return result;
 }
 
-bool get_account(const char *owner, struct account *acc)
+bool bank_get_account(const char *owner, struct account *acc)
 {
     for (int i = 0; i < BANK.accs.size; i++) {
         struct account *b_accs = BANK.accs.items;
@@ -152,12 +165,11 @@ bool get_account(const char *owner, struct account *acc)
             return true;
         }
     }
+    *acc = (struct account){NULL};
     return false;
 }
 
-// Takes ownership of account so it will invalidate previous pointer.
-// Create them temporary and then access them from bank for valid account.
-enum bank_error add_account(const struct account *acc)
+enum bank_error bank_add_account(const struct account *acc)
 {
     if (!acc) {
         fprintf(stderr, "account is null at add_account()\n");
@@ -165,12 +177,12 @@ enum bank_error add_account(const struct account *acc)
     }
 
     struct account _placeholder = {NULL};
-    if (get_account(acc->owner, &_placeholder)) {
+    if (bank_get_account(acc->owner, &_placeholder)) {
         printf("Account with the name %s already exists.\n", acc->owner);
         return ERR_BANK_ACCOUNT_EXISTS;
     }
 
-    if (push_back(&BANK.accs, acc) != OK_VECTOR) {
+    if (!vector_push_back(&BANK.accs, acc)) {
         return ERR_BANK_OPERATION_FAILED;
     }
 
@@ -183,7 +195,7 @@ enum bank_error add_account(const struct account *acc)
     return OK_BANK;
 }
 
-enum bank_error deposit(struct account *acc, const unsigned int deposit_amount)
+enum bank_error bank_deposit(struct account *acc, const unsigned int deposit_amount)
 {
     if (!acc) {
         fprintf(stderr, "account is null at deposit()\n");
@@ -206,7 +218,7 @@ enum bank_error deposit(struct account *acc, const unsigned int deposit_amount)
     return OK_BANK;
 }
 
-enum bank_error withdraw(struct account *acc, const unsigned int withdraw_amount)
+enum bank_error bank_withdraw(struct account *acc, const unsigned int withdraw_amount)
 {
     if (!acc) {
         fprintf(stderr, "account is null at withdraw()\n");
@@ -235,19 +247,19 @@ enum bank_error withdraw(struct account *acc, const unsigned int withdraw_amount
     return OK_BANK;
 }
 
-void print_bank()
+void bank_print_bank()
 {
     printf("Accounts: \n");
     for (int i = 0; i < BANK.accs.size; i++) {
         struct account *acc = &((struct account *)BANK.accs.items)[i];
-        print_acc(acc);
+        account_print_account(acc);
     }
     printf("Current cash: %d\n", BANK.cash);
     printf("Current size: %d\n", BANK.accs.size);
     printf("Current capacity: %d\n", BANK.accs.capacity);
 }
 
-enum bank_error transfer_money(struct account *from, struct account *to, const unsigned int amount)
+enum bank_error bank_transfer_money(struct account *from, struct account *to, const unsigned int amount)
 {
     if (!from) {
         fprintf(stderr, "from account is null at transfer_money()\n");
@@ -279,20 +291,18 @@ enum bank_error transfer_money(struct account *from, struct account *to, const u
     return OK_BANK;
 }
 
-enum bank_error free_bank()
+enum bank_error bank_deinitialize()
 {
     for (int i = 0; i < BANK.accs.size; i++) {
         struct account *accs = BANK.accs.items;
         struct account *acc = &accs[i];
-        if (free_account(acc) != OK_ACCOUNT) {
+        if (account_deinitialize(acc) != OK_ACCOUNT) {
             return ERR_BANK_ACCOUNT_NULL;
         }
         acc = NULL;
     }
 
-    if (free_vector(&BANK.accs) != OK_VECTOR) {
-        return ERR_BANK_OPERATION_FAILED;
-    }
+    vector_deinitialize(&BANK.accs);
 
     BANK.size = 0;
     BANK.capacity = 0;
